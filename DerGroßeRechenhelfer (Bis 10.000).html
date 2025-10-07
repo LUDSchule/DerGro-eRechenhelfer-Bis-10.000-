@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF0-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktiver Mathezähler (Dynamische Größe)</title>
+    <style>
+        /* *** CSS (Design) *** */
+
+        :root {
+            --color-erase: #e0e0e0;                
+            --grid-bg: #e0e0e0;
+        }
+
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0; 
+            padding: 20px;
+        }
+
+        header {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #fff;
+            width: 90%;
+            max-width: 550px; 
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.5em;
+        }
+
+        .input-row input[type="number"], .input-row select {
+            width: 80px;
+            padding: 8px;
+            font-size: 1em;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .controls button {
+            padding: 10px 20px;
+            font-size: 1.1em;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            background-color: #007bff;
+            color: white;
+            transition: background-color 0.2s;
+        }
+        .controls button:hover {
+            background-color: #0056b3;
+        }
+
+        .result-display {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .options {
+            display: flex;
+            gap: 20px; 
+        }
+        .result-toggle {
+             display: flex;
+             align-items: center;
+        }
+        
+        /* NEU: Klasse zum Ausblenden des Ergebnis-Textes */
+        .hide-result {
+            visibility: hidden; /* Behält den Platz, blendet aber den Inhalt aus */
+        }
+
+
+        /* Haupt-Container für alle dynamischen Gitter */
+        #multi-grid-container {
+            display: flex;
+            flex-wrap: wrap; 
+            gap: 20px; 
+            width: 100%; 
+            padding: 0 10px; 
+            box-sizing: border-box; 
+            justify-content: flex-start; 
+        }
+
+        /* Standard-Einstellung: Für 6 Gitter und mehr (schmal) */
+        .grid-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* Flexbox-Berechnung für 10 Gitter pro Reihe */
+            flex: 0 0 calc(10% - 18px); 
+            min-width: 50px; 
+            margin-bottom: 20px;
+        }
+        
+        /* --- Dynamische Größenanpassung basierend auf der Anzahl --- */
+
+        /* 1 Gitter: Sehr groß (90% Breite) */
+        #multi-grid-container.grid-count-1 { justify-content: center; } /* Zentrierung für nur 1 Gitter */
+        #multi-grid-container.grid-count-1 .grid-wrapper {
+            flex: 0 0 90%; 
+            max-width: 500px;
+        }
+
+        /* 2 Gitter: Nimmt die Hälfte der Breite */
+        #multi-grid-container.grid-count-2 .grid-wrapper {
+            flex: 0 0 calc(50% - 10px); 
+            max-width: 400px;
+        }
+
+        /* 3 Gitter: Nimmt ein Drittel der Breite */
+        #multi-grid-container.grid-count-3 .grid-wrapper {
+            flex: 0 0 calc(33.33% - 14px); 
+            max-width: 300px;
+        }
+
+        /* 4 Gitter: Nimmt ein Viertel der Breite */
+        #multi-grid-container.grid-count-4 .grid-wrapper {
+            flex: 0 0 calc(25% - 15px); 
+            max-width: 250px;
+        }
+
+        /* 5 Gitter: Nimmt ein Fünftel der Breite */
+        #multi-grid-container.grid-count-5 .grid-wrapper {
+            flex: 0 0 calc(20% - 16px); 
+            max-width: 220px;
+        }
+        
+        /* Gitter-Titel und Gitter-Design (unverändert) */
+        .grid-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 1.2em; 
+            color: #333;
+            height: 25px; 
+            transition: opacity 0.3s;
+        }
+        
+        .hide-title {
+            opacity: 0;
+        }
+
+        .grid-container { 
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            aspect-ratio: 1 / 1;
+            width: 100%; 
+            border: 5px solid #666;
+            background-color: var(--grid-bg);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Kugel-Basis-Design (unverändert) */
+        .kugel {
+            width: 80%;
+            height: 80%;
+            border-radius: 50%;
+            background-color: var(--grid-bg); 
+            border: 1px solid #ccc;
+            margin: 10%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.7em;
+            color: #333;
+            font-weight: bold;
+            position: relative; 
+            overflow: hidden; 
+            transition: background 0.3s;
+        }
+        
+        .hide-number {
+            color: transparent !important;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Interaktiver Mathezähler (Dynamische Größe) 🔢</h1>
+    </header>
+
+    <div class="controls">
+        
+        <div class="input-row">
+            <input type="number" id="zahl1" value="50" min="1" max="10000">
+            <select id="operator">
+                <option value="+">+</option>
+                <option value="-">-</option>
+                <option value="*">*</option>
+                <option value="/">/</option>
+            </select>
+            <input type="number" id="zahl2" value="45" min="1" max="10000">
+            = <span id="result-text" class="hide-result">---</span>
+            <button onclick="visualizeCalculation()">Berechnen & Visualisieren</button>
+        </div>
+
+        <div class="options">
+             <div class="result-toggle">
+                <input type="checkbox" id="toggleNumbers" onchange="toggleGridNumbers()" checked>
+                <label for="toggleNumbers">Zahlen in Kugeln</label>
+            </div>
+             <div class="result-toggle">
+                <input type="checkbox" id="toggleGridTitles" onchange="toggleGridTitles()" checked>
+                <label for="toggleGridTitles">Hunderter-Zahlen</label>
+            </div>
+             <div class="result-toggle">
+                <input type="checkbox" id="toggleResult" onchange="toggleResultDisplay()" checked>
+                <label for="toggleResult">Ergebnis anzeigen</label>
+            </div>
+        </div>
+    </div>
+
+    <div id="multi-grid-container">
+        </div>
+
+    <script>
+        /* *** JavaScript (Logik) *** */
+
+        const GRID_SIZE = 100;
+        
+        const COLOR_PAIR_MAP = {
+            1: ['hsl(0, 70%, 50%)', 'hsl(30, 60%, 80%)'],      
+            2: ['hsl(30, 70%, 50%)', 'hsl(60, 60%, 80%)'],     
+            3: ['hsl(60, 70%, 45%)', 'hsl(90, 60%, 75%)'],     
+            4: ['hsl(120, 65%, 45%)', 'hsl(180, 55%, 80%)'],   
+            5: ['hsl(180, 65%, 45%)', 'hsl(210, 55%, 75%)'],   
+            6: ['hsl(240, 70%, 50%)', 'hsl(270, 60%, 80%)'],   
+            7: ['hsl(270, 70%, 45%)', 'hsl(300, 60%, 75%)'],   
+            8: ['hsl(300, 70%, 50%)', 'hsl(330, 60%, 80%)'],   
+            9: ['hsl(20, 70%, 45%)', 'hsl(50, 60%, 75%)'],     
+            10: ['hsl(220, 35%, 55%)', 'hsl(220, 25%, 90%)']  
+        };
+
+        const GRID_BG_COLOR = '#e0e0e0'; 
+
+
+        function getConsistentColor(zahl, isDark) {
+            let baseKey;
+            
+            if (zahl === 0) return GRID_BG_COLOR;
+
+            let einerStelle = zahl % 10;
+            
+            if (einerStelle === 0) {
+                baseKey = 10;
+            } else {
+                baseKey = einerStelle;
+            }
+
+            baseKey = Math.min(Math.max(baseKey, 1), 10); 
+
+            const colorPair = COLOR_PAIR_MAP[baseKey];
+            return isDark ? colorPair[0] : colorPair[1];
+        }
+
+        /**
+         * Erstellt die notwendige Anzahl von 100er-Gittern und fügt sie dem DOM hinzu.
+         * Fügt dem Container eine Klasse hinzu, um die Gittergröße dynamisch anzupassen.
+         * @param {number} numGrids - Die benötigte Anzahl an Gittern.
+         */
+        function renderGrids(numGrids) {
+            const multiContainer = document.getElementById('multi-grid-container');
+            multiContainer.innerHTML = ''; 
+
+            // 1. Klasse für dynamische Größenanpassung setzen
+            multiContainer.className = ''; 
+            const sizeClass = Math.min(numGrids, 5); 
+            multiContainer.classList.add(`grid-count-${sizeClass}`); 
+            
+            if (numGrids === 1) {
+                 multiContainer.style.justifyContent = 'center';
+            } else {
+                 multiContainer.style.justifyContent = 'flex-start';
+            }
+            
+            for (let g = 0; g < numGrids; g++) {
+                const startNumber = g * GRID_SIZE + 1;
+                
+                const wrapper = document.createElement('div');
+                wrapper.classList.add('grid-wrapper');
+                
+                const title = document.createElement('div');
+                title.classList.add('grid-title');
+                
+                if (g > 0) {
+                    title.textContent = `${g * GRID_SIZE}`; 
+                } else {
+                    title.textContent = ''; 
+                }
+                
+                wrapper.appendChild(title);
+
+                const gridContainer = document.createElement('div');
+                gridContainer.classList.add('grid-container');
+                gridContainer.id = 'grid-' + (g + 1); 
+                wrapper.appendChild(gridContainer);
+                multiContainer.appendChild(wrapper);
+
+                // Fülle das Gitter mit Kugeln
+                for (let i = 1; i <= GRID_SIZE; i++) {
+                    const kugel = document.createElement('div');
+                    kugel.classList.add('kugel');
+                    kugel.id = `kugel-${startNumber + i - 1}`; 
+                    kugel.textContent = i; 
+                    gridContainer.appendChild(kugel);
+                }
+            }
+            
+            toggleGridNumbers();
+            toggleGridTitles(); 
+            // Wichtig: Ergebnis beim neuen Rendern ausblenden, falls Checkbox aus ist.
+            toggleResultDisplay(); 
+        }
+
+
+        function resetGrids() {
+            document.getElementById('multi-grid-container').innerHTML = '';
+            // Ergebnis beim Reset zurücksetzen
+            document.getElementById('result-text').textContent = '---'; 
+        }
+
+        function getKugelByNumber(num) {
+            return document.getElementById(`kugel-${num}`);
+        }
+
+        function visualizeCalculation() {
+            resetGrids(); 
+
+            const zahl1 = parseInt(document.getElementById('zahl1').value);
+            const operator = document.getElementById('operator').value;
+            const zahl2 = parseInt(document.getElementById('zahl2').value);
+            const resultElement = document.getElementById('result-text');
+
+            if (isNaN(zahl1) || isNaN(zahl2) || zahl1 < 1 || zahl2 < 1) {
+                alert('Bitte geben Sie gültige Zahlen größer als 0 ein.');
+                return;
+            }
+
+            let result;
+
+            try {
+                switch (operator) {
+                    case '+':
+                        result = zahl1 + zahl2;
+                        break;
+                    case '-':
+                        result = zahl1 - zahl2;
+                        break;
+                    case '*':
+                        result = zahl1 * zahl2;
+                        break;
+                    case '/':
+                        if (zahl2 === 0) { alert('Division durch Null ist nicht erlaubt!'); return; }
+                        result = Math.floor(zahl1 / zahl2);
+                        break;
+                    default:
+                        return;
+                }
+            } catch (e) {
+                alert('Ein Berechnungsfehler ist aufgetreten.');
+                return;
+            }
+            
+            // 2. Anzahl der benötigten Gitter bestimmen
+            let maxMarkedNumber = 0;
+            if (operator === '+') {
+                maxMarkedNumber = zahl1 + zahl2;
+            } else if (operator === '-') {
+                maxMarkedNumber = zahl1;
+            } else if (operator === '*') {
+                maxMarkedNumber = zahl1 * zahl2;
+            } else if (operator === '/') {
+                maxMarkedNumber = zahl1;
+            }
+            
+            if (maxMarkedNumber <= 0 && operator !== '-') {
+                 resultElement.textContent = result;
+                 toggleResultDisplay(); // Ergebnis anzeigen/ausblenden
+                 return;
+            }
+            
+            const numGrids = Math.ceil(Math.max(1, maxMarkedNumber) / GRID_SIZE);
+            renderGrids(numGrids); 
+
+            // 3. Visualisierung durchführen
+            switch (operator) {
+                case '+':
+                    visualizeAddition(zahl1, zahl2);
+                    break;
+                case '-':
+                    if (result < 0) {
+                        resultElement.textContent = `${zahl1} - ${zahl2} = ${result} (Ergebnis negativ!)`;
+                        toggleResultDisplay(); 
+                        return;
+                    }
+                    visualizeSubtraction(zahl1, zahl2);
+                    break;
+                case '*':
+                    visualizeMultiplication(zahl1, zahl2);
+                    break;
+                case '/':
+                    visualizeDivision(zahl1, zahl2);
+                    break;
+            }
+            
+            // Ergebnis setzen
+            resultElement.textContent = result;
+
+            if (operator === '/' && maxMarkedNumber > 0) {
+                const remainder = zahl1 % zahl2;
+                resultElement.textContent = `${result} R ${remainder}`;
+            }
+            
+            // Ergebnis-Sichtbarkeit nach der Berechnung anwenden
+            toggleResultDisplay();
+        }
+
+        function visualizeAddition(a, b) {
+            const einerStelleA = a % 10 === 0 ? 10 : a % 10;
+            const einerStelleB = b % 10 === 0 ? 10 : b % 10;
+            
+            let isDarkA = true;
+            let isDarkB = false;
+
+            if (einerStelleA === einerStelleB) {
+                isDarkA = true;
+                isDarkB = false; 
+            } else {
+                isDarkA = true;
+                isDarkB = false;
+            }
+
+            const colorA = getConsistentColor(a, isDarkA);
+            const colorB = getConsistentColor(b, isDarkB); 
+
+            for (let i = 1; i <= a; i++) {
+                const kugel = getKugelByNumber(i);
+                if (kugel) { kugel.style.backgroundColor = colorA; }
+            }
+            
+            for (let i = a + 1; i <= a + b; i++) {
+                const kugel = getKugelByNumber(i);
+                if (kugel) { kugel.style.backgroundColor = colorB; }
+            }
+        }
+
+        function visualizeSubtraction(a, b) {
+            if (b > a) { return; } 
+
+            const colorA = getConsistentColor(a, true);
+
+            for (let i = 1; i <= a; i++) {
+                const kugel = getKugelByNumber(i);
+                if (kugel) { kugel.style.backgroundColor = colorA; }
+            }
+
+            const startErase = a - b + 1;
+            for (let i = startErase; i <= a; i++) {
+                const kugel = getKugelByNumber(i);
+                if (kugel) {
+                    kugel.style.background = `linear-gradient(to top, ${colorA} 50%, ${GRID_BG_COLOR} 50%)`;
+                }
+            }
+        }
+
+        function visualizeMultiplication(a, b) {
+            const result = a * b;
+
+            const colorOdd = getConsistentColor(b, true);
+            const colorEven = getConsistentColor(b, false);
+            
+            for (let step = 1; step <= a; step++) {
+                const startNum = (step - 1) * b + 1;
+                const endNum = step * b;
+                
+                const stepColor = (step % 2 !== 0) ? colorOdd : colorEven;
+                
+                for (let i = startNum; i <= endNum; i++) {
+                    const kugel = getKugelByNumber(i);
+                    if (kugel) {
+                        kugel.style.backgroundColor = stepColor;
+                    }
+                }
+            }
+        }
+
+        function visualizeDivision(a, b) {
+            if (a === 0 || b === 0) return;
+
+            const remainder = a % b;
+
+            const einerStelleA = a % 10 === 0 ? 10 : a % 10;
+            const einerStelleB = b % 10 === 0 ? 10 : b % 10;
+            
+            let isDarkA = true;
+            if (einerStelleA === einerStelleB) {
+                isDarkA = false; 
+            }
+
+            const colorA = getConsistentColor(a, isDarkA); 
+            const colorDivisorOdd = getConsistentColor(b, true); 
+            const colorDivisorEven = getConsistentColor(b, false); 
+            
+            for (let i = 1; i <= a; i++) {
+                const kugel = getKugelByNumber(i);
+                if (!kugel) continue;
+                
+                const groupIndex = Math.ceil(i / b); 
+                const rightColor = (groupIndex % 2 !== 0) 
+                    ? colorDivisorOdd
+                    : colorDivisorEven;
+
+                kugel.style.background = `linear-gradient(to right, ${colorA} 50%, ${rightColor} 50%)`;
+            }
+            
+            if (remainder > 0) {
+                 const startRemainder = a - remainder + 1;
+                 
+                 for (let i = startRemainder; i <= a; i++) {
+                     const kugel = getKugelByNumber(i);
+                     if (kugel) {
+                          kugel.style.background = `linear-gradient(to right, ${colorA} 50%, ${GRID_BG_COLOR} 50%)`;
+                     }
+                 }
+            }
+        }
+
+        /**
+         * Schaltet die Anzeige der Zahlen (1-N) in den Kugeln ein/aus.
+         */
+        function toggleGridNumbers() {
+            const allKugeln = document.querySelectorAll('.kugel');
+            const showNumbers = document.getElementById('toggleNumbers').checked;
+            
+            allKugeln.forEach(kugel => {
+                if (showNumbers) {
+                    kugel.classList.remove('hide-number');
+                } else {
+                    kugel.classList.add('hide-number');
+                }
+            });
+        }
+        
+        /**
+         * Schaltet die Anzeige der Hunderter-Titel über den Gittern ein/aus.
+         */
+        function toggleGridTitles() {
+            const allTitles = document.querySelectorAll('.grid-title');
+            const showTitles = document.getElementById('toggleGridTitles').checked;
+            
+            allTitles.forEach(title => {
+                if (showTitles) {
+                    title.classList.remove('hide-title');
+                } else {
+                    title.classList.add('hide-title');
+                }
+            });
+        }
+        
+        /**
+         * Schaltet die Anzeige des Rechenergebnisses ein/aus.
+         */
+        function toggleResultDisplay() {
+            const resultSpan = document.getElementById('result-text');
+            const showResult = document.getElementById('toggleResult').checked;
+            
+            if (showResult) {
+                resultSpan.classList.remove('hide-result');
+            } else {
+                resultSpan.classList.add('hide-result');
+            }
+        }
+
+
+        // Initialisierung beim Laden der Seite
+        renderGrids(1); 
+    </script>
+</body>
+</html>
